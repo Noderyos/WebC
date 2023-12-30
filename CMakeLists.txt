@@ -3,4 +3,6 @@ project(WebC C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(WebC main.c)
+add_executable(WebC main.c
+        request.c
+        request.h)

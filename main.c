@@ -1,8 +1,10 @@
 #include <stdio.h>
+#include <string.h>
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netinet/in.h>
-#include <string.h>
+#include <malloc.h>
+#include "request.h"
 
 int main() {
 
@@ -40,16 +42,38 @@ int main() {
         return -1;
     }
 
-    char request[1024];
+    request r;
 
-    recv(client_fd, request, 1023, 0);
+    char *req = (char*)malloc(1024);
+    char *req_start = req;
+    recv(client_fd, req, 1023, 0);
 
-    char *response = "HTTP/1.1 200\r\n"
-                "Content-Type: text/text\r\n"
-                "\r\n"
-                "Hello, world";
+    int req_type_len = (int)(strchr(req, ' ')-req);
+
+    r.method = (char*) malloc(req_type_len + 1);
+    strncpy(r.method, req, req_type_len);
+
+    req[req_type_len] = 0;
+    req += req_type_len + 1;  // Move after request method
+
+
+    int path_len = (int)(strchr(req, ' ') - req);
+
+    r.path = (char*) malloc(path_len + 1);
+    strncpy(r.path, req, path_len);
+
+    req[path_len] = 0;
+    req += path_len + 1;  // Move after request path
+
+    char response[1024];
+
+    handle_request(&r, response, 1023);
 
     send(client_fd, response, strlen(response), 0);
+
+    free(req_start);
+    free(r.method);
+    free(r.path);
 
     close(client_fd);
     close(sockfd);
