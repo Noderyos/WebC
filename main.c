@@ -13,6 +13,12 @@ int main() {
         return -1;
     }
 
+    int o = 1;
+    if(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &o, sizeof(o)) < 0){
+        perror("setsockopt");
+        return -1;
+    }
+
     struct sockaddr_in sock_info = {0};
     sock_info.sin_family = AF_INET;
     sock_info.sin_port = htons(8080);
@@ -34,9 +40,16 @@ int main() {
         return -1;
     }
 
-    char* buf = "Hello world\n";
+    char request[1024];
 
-    send(client_fd, buf, strlen(buf), 0);
+    recv(client_fd, request, 1023, 0);
+
+    char *response = "HTTP/1.1 200\r\n"
+                "Content-Type: text/text\r\n"
+                "\r\n"
+                "Hello, world";
+
+    send(client_fd, response, strlen(response), 0);
 
     close(client_fd);
     close(sockfd);
