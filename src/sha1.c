@@ -1,4 +1,4 @@
-#include "sha1.h"
+#include "include/sha1.h"
 
 void process_msg_block(SHA1Context *context){
     int t;

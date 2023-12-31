@@ -1,4 +1,4 @@
-#include "http.h"
+#include "include/http.h"
 
 int parse_before_header(request *req, char* line){
     char *delimiter = " ";
@@ -58,20 +58,7 @@ char* get_header(request *req, char* name){
 }
 
 
-void strcat_format(char *destination, size_t maxSize, const char *format, ...) {
-    va_list args;
-    va_start(args, format);
 
-    char* formated = (char*) malloc(1024);
-
-    sprintf(formated, format, args);
-
-    va_end(args);
-
-    strncat(destination, formated, maxSize);
-
-    free(formated);
-}
 
 void handle_request(request *req, int max_rsp_len){
 

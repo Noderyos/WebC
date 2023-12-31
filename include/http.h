@@ -25,9 +25,9 @@ typedef enum {
 } http_method;
 
 typedef enum {
-    HTTP_SESSION,
-    WEBSOCKET_SESSION
-} session_type;
+    HTTP_CONNECTION,
+    WEBSOCKET_CONNECTION
+} connection_type;
 
 typedef struct {
     char _data[MAX_HEADER_SIZE];
