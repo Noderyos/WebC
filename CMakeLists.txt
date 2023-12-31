@@ -3,6 +3,4 @@ project(WebC C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(WebC main.c
-        request.c
-        request.h)
+add_executable(WebC main.c http.c base64.c sha1.c)

@@ -1,4 +1,4 @@
-#include "request.h"
+#include "http.h"
 
 int parse_before_header(request *req, char* line){
     char *delimiter = " ";
@@ -48,6 +48,15 @@ int parse_header(request *req, char* line){
     return 0;
 }
 
+char* get_header(request *req, char* name){
+    for (int i = 0; i < req->header_count; ++i) {
+        header h = req->headers[i];
+        if(strcmp(h.name, name) == 0)
+            return h.value;
+    }
+    return NULL;
+}
+
 
 void strcat_format(char *destination, size_t maxSize, const char *format, ...) {
     va_list args;
@@ -64,7 +73,9 @@ void strcat_format(char *destination, size_t maxSize, const char *format, ...) {
     free(formated);
 }
 
-void handle_request(request *req, char* response, int max_rsp_len){
+void handle_request(request *req, int max_rsp_len){
+
+    char* response = req->response;
 
     strcpy(response, "HTTP/1.1 200\r\nContent-Type: text/html\r\n\r\n");
     strcat(response, "<h1>You have requested the path ");

@@ -3,7 +3,14 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netinet/in.h>
-#include "request.h"
+#include "http.h"
+#include "base64.h"
+#include "sha1.h"
+
+#define MAX_RESP_SIZE 1024
+
+int parse_headers(int fd, request *req);
+
 
 int main() {
 
@@ -35,43 +42,56 @@ int main() {
         return -1;
     }
 
-    int client_fd = accept(sockfd, NULL, NULL);
-    if(client_fd < 0){
+
+    int clientfd = accept(sockfd, NULL, NULL);
+    if(clientfd < 0){
         perror("accept");
         return -1;
     }
 
     request req = {0};
-    char response[1024];
+    char response[MAX_RESP_SIZE+1];
 
+    req.response = response;
+
+    if(parse_headers(clientfd, &req) == 0)
+        handle_request(&req, MAX_RESP_SIZE);
+
+    send(clientfd, response, strlen(response), 0);
+
+    close(clientfd);
+    close(sockfd);
+
+    return 0;
+}
+
+int parse_headers(int fd, request *req){
     int header_idx = -1;
 
     char line[MAX_HEADER_SIZE+1];
     char buf[1];
     int line_idx = 0;
-    while (0 != recv(client_fd, buf, 1, 0)){
+    while (0 != recv(fd, buf, 1, 0)){
         if(buf[0] == '\r'){
-            recv(client_fd, buf, 1, 0);  // Skip \n after \r
+            recv(fd, buf, 1, 0);  // Skip \n after \r
             line[line_idx] = 0;
 
-            if(line_idx == 0){
-                printf("Breaking\n");
+            if(line_idx == 0)
                 break;
-            }
 
             if(header_idx > MAX_HEADER_COUNT){
-                strncpy(response, "HTTP/1.1 413 Payload Too Large\r\n\r\nPayload Too Large", 1023);
-                goto send_request;
+                strncpy(req->response, "HTTP/1.1 413 Payload Too Large\r\n\r\nPayload Too Large", MAX_RESP_SIZE);
+                return -1;
             }
             if (header_idx++ < 0){
-                if(parse_before_header(&req, line) < 0){
-                    strncpy(response, "HTTP/1.1 400 Bad Request\r\n\r\nBad Request\n", 1023);
-                    goto send_request;
+                if(parse_before_header(req, line) < 0){
+                    strncpy(req->response, "HTTP/1.1 400 Bad Request\r\n\r\nBad Request\n", MAX_RESP_SIZE);
+                    return -1;
                 }
             } else{
-                if(parse_header(&req, line) < 0){
-                    strncpy(response, "HTTP/1.1 400 Bad Request\r\n\r\nBad Request\n", 1023);
-                    goto send_request;
+                if(parse_header(req, line) < 0){
+                    strncpy(req->response, "HTTP/1.1 400 Bad Request\r\n\r\nBad Request\n", MAX_RESP_SIZE);
+                    return -1;
                 }
             }
             header_idx++;
@@ -79,26 +99,17 @@ int main() {
         }else{
             if(line_idx > MAX_HEADER_SIZE){
                 if(header_idx < 0)
-                    strncpy(response, "HTTP/1.1 414 URI Too Long\r\n\r\nURI Too Long\n", 1023);
+                    strncpy(req->response, "HTTP/1.1 414 URI Too Long\r\n\r\nURI Too Long\n", MAX_RESP_SIZE);
                 else
                     strncpy(
-                            response,
+                            req->response,
                             "HTTP/1.1 431 Request Header Fields Too Large\r\n\r\n"
                             "Request Header Fields Too Large\n",
-                            1023);
-                goto send_request;
+                            MAX_RESP_SIZE);
+                return -1;
             }
             line[line_idx++] = buf[0];
         }
     }
-    handle_request(&req, response, 1023);
-
-send_request:
-
-    send(client_fd, response, strlen(response), 0);
-
-    close(client_fd);
-    close(sockfd);
-
     return 0;
 }

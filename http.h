@@ -1,5 +1,5 @@
-#ifndef WEBC_REQUEST_H
-#define WEBC_REQUEST_H
+#ifndef WEBC_HTTP_H
+#define WEBC_HTTP_H
 
 #include <stdio.h>
 #include <string.h>
@@ -24,6 +24,10 @@ typedef enum {
     HTTP_UNKNOWN
 } http_method;
 
+typedef enum {
+    HTTP_SESSION,
+    WEBSOCKET_SESSION
+} session_type;
 
 typedef struct {
     char _data[MAX_HEADER_SIZE];
@@ -36,11 +40,14 @@ typedef struct {
     char path[MAX_URL_SIZE];
     int header_count;
     header headers[MAX_HEADER_COUNT];
+    char *response;
 } request;
 
-void handle_request(request *req, char* response, int max_rsp_len);
+void handle_request(request *req, int max_rsp_len);
 
 int parse_before_header(request *req, char* line);
 int parse_header(request *req, char* line);
 
-#endif //WEBC_REQUEST_H
+char* get_header(request *req, char* name);
+
+#endif //WEBC_HTTP_H
