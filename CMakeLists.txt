@@ -3,4 +3,8 @@ project(WebC C)
 
 set(CMAKE_C_STANDARD 11)
 
-add_executable(WebC main.c http.c base64.c sha1.c)
+include_directories(include)
+
+add_executable(WebC src/main.c src/http.c src/base64.c src/sha1.c src/websocket.c)
+
+target_link_libraries(WebC z)

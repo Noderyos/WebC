@@ -3,9 +3,10 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <netinet/in.h>
-#include "include/http.h"
-#include "include/base64.h"
-#include "include/sha1.h"
+#include "http.h"
+#include "base64.h"
+#include "sha1.h"
+#include "websocket.h"
 
 #define MAX_RESP_SIZE 1024
 
@@ -93,14 +94,12 @@ int main() {
             }
             send(clientfd, response, strlen(response), 0);
         }else if(type == WEBSOCKET_CONNECTION){
-            char bb[1024];
-            int a = recv(clientfd, bb, 1023, 0);
-            if(a){
-                for (int i = 0; i < a; ++i) {
-                    printf("%02x", bb[i] & 0xff);
-                }
-                printf("\n");
-            }
+            ws_packet packet = {0};
+            ws_receive_preprocess(&packet, clientfd);
+
+            handle_ws_packet(&packet, clientfd);
+
+            ws_cleanup(&packet);
         }
     }
 
