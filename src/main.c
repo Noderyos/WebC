@@ -77,7 +77,7 @@ int main() {
                             strcpy(key, ws_key);
                             strcat(key, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
 
-                            SHA1(key, hash, strlen(key));
+                            SHA1((uint8_t *)key, (uint8_t *)hash, strlen(key));
                             unsigned char* accept = b64encode(hash);
 
                             strcat_format(req.response,

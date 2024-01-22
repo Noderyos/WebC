@@ -65,14 +65,10 @@ ws_result ws_receive_preprocess(ws_packet* packet, int fd){
             uint8_t size[4];
             if(recv(fd, size, 4, 0) == 2){
                 packet->real_packet_size =
-                        (size[0] << 56) |
-                        (size[1] << 48) |
-                        (size[2] << 40) |
-                        (size[3] << 32) |
-                        (size[4] << 24) |
-                        (size[5] << 16) |
-                        (size[6] << 8) |
-                        size[7];
+                        (size[0] << 24) |
+                        (size[1] << 16) |
+                        (size[2] << 8) |
+                        size[3];
             }
         }
 
@@ -86,7 +82,7 @@ ws_result ws_receive_preprocess(ws_packet* packet, int fd){
 
         recv(fd, payload, (unsigned int)packet->real_packet_size, 0);
 
-        for (int i = 0; i < packet->real_packet_size; ++i)  // If the packet doesn't have mask, this will do nothing
+        for (uint64_t i = 0; i < packet->real_packet_size; ++i)  // If the packet doesn't have mask, this will do nothing
             payload[i] ^= mask[i%4];
 
         size_t uncompressed_payload_size;
@@ -134,7 +130,7 @@ ws_result handle_ws_packet(ws_packet *packet, int fd){
 
         send_packet.payload = malloc(11);
 
-        strcpy(send_packet.payload, u);
+        strcpy((char *)send_packet.payload, u);
 
         ws_send_packet(&send_packet, fd);
 
