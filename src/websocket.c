@@ -47,10 +47,12 @@ int payload_inflate(unsigned char *payload, size_t payload_size, unsigned char *
     return 0;
 }
 
-void ws_receive_preprocess(ws_packet* packet, int fd){
+ws_result ws_receive_preprocess(ws_packet* packet, int fd){
     uint8_t header[2];
     if(recv(fd, header, 2, 0) == 2){
-        packet->hdr = (ws_header*)header;
+        packet->hdr = malloc(sizeof(ws_header));
+
+        memcpy(packet->hdr, header, 2);
 
         packet->real_packet_size = packet->hdr->payload_size;
 
@@ -74,8 +76,6 @@ void ws_receive_preprocess(ws_packet* packet, int fd){
             }
         }
 
-        printf("UWU %lu\n", packet->real_packet_size);
-
 
         unsigned char* payload = (unsigned char*) malloc((unsigned int)packet->real_packet_size);
         memset(payload, 0, packet->real_packet_size);
@@ -94,14 +94,18 @@ void ws_receive_preprocess(ws_packet* packet, int fd){
         payload_inflate(payload, packet->real_packet_size, &packet->payload, &uncompressed_payload_size);
 
         free(payload);
+    }else{
+        perror("recv");
+        return RESULT_ERR;
     }
+    return RESULT_OK;
 }
 
 void ws_cleanup(ws_packet* packet){
     free(packet->payload);
 }
 
-void handle_ws_packet(ws_packet *packet, int fd){
+ws_result handle_ws_packet(ws_packet *packet, int fd){
     ws_header header = *packet->hdr;
     if(header.opcode == WS_PING){
         ws_header response_hdr = {0};
@@ -111,13 +115,34 @@ void handle_ws_packet(ws_packet *packet, int fd){
         response_hdr.opcode = WS_PONG;
         response_hdr.payload_size = 0;
         send(fd, &response_hdr, sizeof response_hdr, 0);
-        return;
+        return RESULT_OK;
     }
 
     if(packet->hdr->opcode == WS_TEXT){
         ws_header response_hdr = {0};
         ws_packet send_packet = {0};
 
+        response_hdr.fin = 1;
+        response_hdr.mask = 0;
+        response_hdr.reserved = 0;
+        response_hdr.opcode = WS_TEXT;
+        response_hdr.payload_size = 11;
+
+        send_packet.hdr = &response_hdr;
+
+        char * u = "Hello world";
+
+        send_packet.payload = malloc(11);
+
+        strcpy(send_packet.payload, u);
+
+        ws_send_packet(&send_packet, fd);
+
+        return RESULT_OK;
+    }
+    if(packet->hdr->opcode == WS_CONNECTION_CLOSE){
+        ws_header response_hdr = {0};
+        ws_packet send_packet = {0};
         response_hdr.fin = 1;
         response_hdr.mask = 0;
         response_hdr.reserved = 0;
@@ -132,8 +157,9 @@ void handle_ws_packet(ws_packet *packet, int fd){
         send_packet.payload = (uint8_t*)&code;
 
         ws_send_packet(&send_packet, fd);
+        return RESULT_ERR;
     }
-
+    return RESULT_OK;
 }
 
 void ws_send_packet(ws_packet *packet, int fd){

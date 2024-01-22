@@ -9,6 +9,11 @@
 #include <sys/socket.h>
 
 typedef enum{
+    RESULT_OK,
+    RESULT_ERR
+} ws_result;
+
+typedef enum{
     WS_CONTINUATION,
     WS_TEXT,
     WS_BINARY,
@@ -28,7 +33,7 @@ typedef enum {
     CLOSE_POLICY_VIOLATION,  // The connection was closed due to a violation of security policy.
     CLOSE_MESSAGE_TOO_BIG,  // The server received a message too large to process.
     CLOSE_MISSING_EXTENSION,  // The client requested one or more extensions that are not supported by the server.
-    CLOSE_INTERNAL_ERROR,  // The server encountered an unexpected condition that prevented it from fulfilling the request.
+    CLOSE_INTERNAL_ERROR,  // The server encountered an unexpected condition that prevented it from fulfilling the http_request.
     CLOSE_SERVICE_RESTART,  // The server is restarting.
     CLOSE_TRY_AGAIN_LATER,  // The server is temporarily unavailable, often due to server overload or maintenance.
     CLOSE_BAD_GATEWAY,  // The server is acting as a gateway or proxy and received an invalid response from the upstream server.
@@ -52,12 +57,12 @@ typedef struct {
     uint8_t *payload;
 } ws_packet;
 
-void ws_receive_preprocess(ws_packet* packet, int fd);
+ws_result ws_receive_preprocess(ws_packet* packet, int fd);
 void ws_cleanup(ws_packet* packet);
 
 int payload_inflate(unsigned char *payload, size_t payload_size, unsigned char **uncompressed_data, size_t *uncompressed_size);
 
-void handle_ws_packet(ws_packet *packet, int fd);
+ws_result handle_ws_packet(ws_packet *packet, int fd);
 
 void ws_send_packet(ws_packet *packet, int fd);
 

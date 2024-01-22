@@ -1,6 +1,6 @@
 #include "../include/http.h"
 
-int parse_before_header(request *req, char* line){
+int parse_before_header(http_request *req, char* line){
     char *delimiter = " ";
     char *token = strtok(line, delimiter);
 
@@ -30,7 +30,7 @@ int parse_before_header(request *req, char* line){
     return 0;
 }
 
-int parse_header(request *req, char* line){
+int parse_header(http_request *req, char* line){
     long name_size = strstr(line, ": ") - line;
     if(name_size < 0)
         return -1;
@@ -48,9 +48,9 @@ int parse_header(request *req, char* line){
     return 0;
 }
 
-char* get_header(request *req, char* name){
+char* get_header(http_request *req, char* name){
     for (int i = 0; i < req->header_count; ++i) {
-        header h = req->headers[i];
+        http_header h = req->headers[i];
         if(strcmp(h.name, name) == 0)
             return h.value;
     }
@@ -58,9 +58,7 @@ char* get_header(request *req, char* name){
 }
 
 
-
-
-void handle_request(request *req, int max_rsp_len){
+void handle_request(http_request *req, int max_rsp_len){
 
     char* response = req->response;
 
@@ -69,7 +67,7 @@ void handle_request(request *req, int max_rsp_len){
     strcat(response, req->path);
     strcat(response, "</h1><br>Headers list : <ul>");
     for (int i = 0; i < req->header_count; ++i) {
-        header h = req->headers[i];
+        http_header h = req->headers[i];
 
         strcat(response, "<li>Name = ");
         strcat(response, h.name);

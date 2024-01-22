@@ -20,34 +20,28 @@ typedef enum {
     HTTP_PATCH,
     HTTP_HEAD,
     HTTP_OPTIONS,
-    HTTP_TRACE,
-    HTTP_UNKNOWN
+    HTTP_TRACE
 } http_method;
-
-typedef enum {
-    HTTP_CONNECTION,
-    WEBSOCKET_CONNECTION
-} connection_type;
 
 typedef struct {
     char _data[MAX_HEADER_SIZE];
     char* name;
     char* value;
-} header;
+} http_header;
 
 typedef struct {
     http_method method;
     char path[MAX_URL_SIZE];
     int header_count;
-    header headers[MAX_HEADER_COUNT];
+    http_header headers[MAX_HEADER_COUNT];
     char *response;
-} request;
+} http_request;
 
-void handle_request(request *req, int max_rsp_len);
+void handle_request(http_request *req, int max_rsp_len);
 
-int parse_before_header(request *req, char* line);
-int parse_header(request *req, char* line);
+int parse_before_header(http_request *req, char* line);
+int parse_header(http_request *req, char* line);
 
-char* get_header(request *req, char* name);
+char* get_header(http_request *req, char* name);
 
 #endif //WEBC_HTTP_H

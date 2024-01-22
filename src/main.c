@@ -10,8 +10,14 @@
 
 #define MAX_RESP_SIZE 1024
 
-int parse_headers(int fd, request *req);
-char* should_upgrade(request *req);
+
+typedef enum {
+    HTTP_CONNECTION,
+    WEBSOCKET_CONNECTION
+} connection_type;
+
+int parse_http_headers(int fd, http_request *req);
+char* should_upgrade(http_request *req);
 void strcat_format(char *destination, const char *format, ...);
 
 int main() {
@@ -56,12 +62,12 @@ int main() {
 
     while (!should_close){
         if(type == HTTP_CONNECTION){
-            request req = {0};
+            http_request req = {0};
             char response[MAX_RESP_SIZE+1] = {0};
 
             req.response = response;
 
-            if(parse_headers(clientfd, &req) == 0){
+            if(parse_http_headers(clientfd, &req) == 0){
                 char* upgrade = should_upgrade(&req);
                 if(upgrade){
                     if(strcmp(upgrade, "websocket") == 0){
@@ -72,7 +78,7 @@ int main() {
                             strcat(key, "258EAFA5-E914-47DA-95CA-C5AB0DC85B11");
 
                             SHA1(key, hash, strlen(key));
-                            char* accept = b64encode(hash);
+                            unsigned char* accept = b64encode(hash);
 
                             strcat_format(req.response,
                                           "HTTP/1.1 101 Switching Protocols\r\n"
@@ -84,7 +90,10 @@ int main() {
                             free(accept);
                             type = WEBSOCKET_CONNECTION;
                         }else{
-                            strncpy(req.response, "HTTP/1.1 400 Bad Request\r\n\r\nBad Request\n", MAX_RESP_SIZE);
+                            strncpy(req.response,
+                                    "HTTP/1.1 400 Bad Request\r\n"
+                                    "\r\n"
+                                    "Bad Request\n", MAX_RESP_SIZE);
                         }
                     }
                 }else{
@@ -95,10 +104,14 @@ int main() {
             send(clientfd, response, strlen(response), 0);
         }else if(type == WEBSOCKET_CONNECTION){
             ws_packet packet = {0};
-            ws_receive_preprocess(&packet, clientfd);
-
-            handle_ws_packet(&packet, clientfd);
-
+            if(ws_receive_preprocess(&packet, clientfd) == RESULT_ERR){
+                should_close = 1;
+                continue;
+            }
+            if(handle_ws_packet(&packet, clientfd) == RESULT_ERR){
+                should_close = 1;
+                continue;
+            }
             ws_cleanup(&packet);
         }
     }
@@ -109,7 +122,7 @@ int main() {
     return 0;
 }
 
-int parse_headers(int fd, request *req){
+int parse_http_headers(int fd, http_request *req){
     int header_idx = -1;
 
     char line[MAX_HEADER_SIZE+1];
@@ -158,7 +171,7 @@ int parse_headers(int fd, request *req){
     return 0;
 }
 
-char* should_upgrade(request *req){
+char* should_upgrade(http_request *req){
     if(get_header(req, "Connection")){
         if(strcmp(get_header(req, "Connection"), "Upgrade") == 0){
             char* upgrade = get_header(req, "Upgrade");
